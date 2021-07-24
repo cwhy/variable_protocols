@@ -28,7 +28,10 @@ class Gaussian(NamedTuple):
     type = 'gaussian'
 
 
-VariableTensor = Tuple[BaseVariable, Tuple[int, ...]]
+class VariableTensor(NamedTuple):
+    type: BaseVariable
+    dim: Tuple[int, ...]
+    positioned: bool = True
 
 
 class VariableGroup(NamedTuple):
