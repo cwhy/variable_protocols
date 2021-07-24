@@ -3,3 +3,5 @@ __pycache__/*
 dist/*
 .idea/*
 *.egg-info
+src/__pycache__/*
+src/*/__pycache__/*

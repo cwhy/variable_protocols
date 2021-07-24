@@ -1,31 +1,38 @@
-from typing import Literal, Protocol, NamedTuple, Tuple, Union, Set
+from __future__ import annotations
+
+import abc
+from typing import Literal, Protocol, NamedTuple, Tuple, Union, Set, Final
+
+BaseVariableType = Literal['bounded', '1hot', '2vec', 'gaussian']
 
 
 class BaseVariable(Protocol):
-    type: Literal['bounded', '1hot', '2vec', 'gaussian']
+    @property
+    @abc.abstractmethod
+    def type(self) -> BaseVariableType: ...
 
 
 class Bounded(NamedTuple):
     max: float
     min: float
-    type = 'bounded'
+    type: BaseVariableType = 'bounded'
 
 
 class OneHot(NamedTuple):
     n_category: int
-    type = '1hot'
+    type: BaseVariableType = '1hot'
 
 
 class CatVec(NamedTuple):
     n_category: int
     n_embedding: int
-    type = '2vec'
+    type: BaseVariableType = '2vec'
 
 
 class Gaussian(NamedTuple):
     mean: float = 0
     var: float = 1
-    type = 'gaussian'
+    type: BaseVariableType = 'gaussian'
 
 
 class VariableTensor(NamedTuple):
@@ -34,21 +41,44 @@ class VariableTensor(NamedTuple):
     positioned: bool = True
 
 
-class VariableGroup(NamedTuple):
-    name: str
-    variables: Set[Union[VariableTensor, 'VariableGroup']]
+class VariablePort(Protocol):
+    @property
+    @abc.abstractmethod
+    def name(self) -> str: ...
+
+    @property
+    @abc.abstractmethod
+    def variables(self) -> Set[Union[VariableTensor, VariablePort]]: ...
+
+
+class VariableGroup:
+    """
+    Because mypy does not support recursive types
+    """
+
+    def __init__(self, name: str, variables: Set[Union[VariableTensor, VariablePort]]):
+        self.name: Final[str] = name
+        self._variables = variables
+
+    @property
+    def variables(self) -> Set[Union[VariableTensor, VariablePort]]:
+        return self._variables
 
 
 def named_variable(name: str, variable: VariableTensor):
     return VariableGroup(name, variables={variable})
 
 
-def fmt_var_group(g: VariableGroup, indent: int = 0) -> str:
+def named_variables(name: str, variables: Set[Union[VariableTensor, VariablePort]]):
+    return VariableGroup(name, variables=variables)
+
+
+def fmt_var_group(g: VariablePort, indent: int = 0) -> str:
     s = ""
     s += f"{g.name}\n" + (indent * " ") + "{"
     indent += len(s)
     for var in g.variables:
-        if isinstance(var, Tuple):
+        if isinstance(var, tuple):
             s += f"{var}, "
         else:
             s += fmt_var_group(var, indent)
