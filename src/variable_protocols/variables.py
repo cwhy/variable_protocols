@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import FrozenSet, List, Dict, Set, Literal
+from typing import FrozenSet, List, Dict, Set, Literal, Iterable
 
+from variable_protocols.hashed_tree_compare import str_hash
 from variable_protocols.protocols import VariableTensor, Variable, VariableGroup, NamedVariable, VariableList, Bounded, \
     OneHot, CategoricalVector, Gaussian, Dimension, BaseVariable, UnNamedVariable, Ordinal, NamedCategorical, \
     OneSideSupported, Gamma, CategoryIds
@@ -70,8 +71,8 @@ def cat_vec(n_category: int, n_embedding: int) -> CategoricalVector:
         raise ValueError(f"Invalid n_category value: {n_category}")
 
 
-def cat_from_names(names: List[str]) -> NamedCategorical:
-    return NamedCategorical(names)
+def cat_from_names(names: Iterable[str]) -> NamedCategorical:
+    return NamedCategorical(frozenset(names))
 
 
 def cat_ids(max_id_len: int) -> CategoryIds:
@@ -85,11 +86,19 @@ def gaussian(mean: float, var: float) -> Gaussian:
         raise ValueError(f"Invalid variance(var) value: {var}")
 
 
-def dim(name: str, length: int, positioned: bool = True) -> Dimension:
-    return Dimension(name, length, positioned)
+def dim(name: str, length: int) -> Dimension:
+    return Dimension(name, length)
 
 
 def var_tensor(var: BaseVariable, dims: Set[Dimension]) -> VariableTensor:
+    if len(dims) <= 1:
+        raise ValueError((
+            "len(dims) <= 1:\n"
+            "Creation if 1D tensor is not allowed "
+            "to avoid duplicate representations, "
+            "use var_array instead. "
+            "To create scalars, use var_scalar."
+        ))
     return VariableTensor(var, frozenset(dims))
 
 
@@ -98,6 +107,7 @@ def var_scalar(var: BaseVariable) -> VariableTensor:
 
 
 def var_set(vars_set: Set[Variable]) -> VariableGroup:
+    assert isinstance(vars_set, set)
     if len(vars_set) <= 1:
         raise ValueError("A variable set/group must contain more than one variable")
     return VariableGroup(frozenset(vars_set))
@@ -115,6 +125,12 @@ def var_ordered(vars_list: List[UnNamedVariable]) -> VariableGroup:
         add_name(var, str(i))
         for i, var in enumerate(vars_list)
     })
+
+
+def var_array(var: BaseVariable, length: int) -> VariableGroup:
+    # noinspection PyTypeChecker
+    # because pyCharm sucks
+    return var_ordered([var_scalar(var)] * length)
 
 
 def add_name(var: UnNamedVariable, name: str) -> NamedVariable:
@@ -139,7 +155,7 @@ def fmt_dims(dims: FrozenSet[Dimension], indent: int = 0, curr_indent: int = 0) 
     s = ""
     curr_indent += len(s) + indent
     for d in dims:
-        s += f"{d.name}[{d.len}{', shuffle-able' if not d.positioned else ''}], "
+        s += f"{d.name}[{d.len}], "
     s = s.strip(", ")
     return s
 

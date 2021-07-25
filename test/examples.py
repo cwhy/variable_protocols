@@ -1,7 +1,8 @@
 # float MNIST input
 from src.variable_protocols.variables import fmt_var, dim, bounded_float, var_tensor, var_scalar, one_hot, \
-    cat_from_names, var_set, positive_float, var_named, cat_vec, cat_ids
+    cat_from_names, var_set, positive_float, var_named, cat_vec, cat_ids, var_ordered, var_array
 from src.variable_protocols.common_variables import var_image, var_sentence_1hot, var_sentence
+from variable_protocols.hashed_tree_compare import str_hash
 
 # noinspection PyTypeChecker
 # because pyCharm sucks
@@ -33,6 +34,20 @@ cat_names = ["Setosa", "Versicolour", "Virginica"]
 # noinspection PyTypeChecker
 # because pyCharm sucks
 iris_in = var_set({var_named(positive_float(), name) for name in ft_names})
+
+# noinspection PyTypeChecker
+# because pyCharm sucks
+iris_in_clean = var_array(positive_float(), 4)
+# noinspection PyTypeChecker
+# because pyCharm sucks
+iris_in_clean2 = var_ordered([var_scalar(positive_float())]*4)
+assert iris_in_clean == iris_in_clean2
+# noinspection PyTypeChecker
+# because pyCharm sucks
+assert str_hash(iris_in_clean, ignore_names=True) == str_hash(iris_in, ignore_names=True)
+# noinspection PyTypeChecker
+# because pyCharm sucks
+assert str_hash(iris_in_clean, ignore_names=False) != str_hash(iris_in, ignore_names=False)
 # noinspection PyTypeChecker
 # because pyCharm sucks
 iris_out = var_scalar(cat_from_names(cat_names))
@@ -50,24 +65,11 @@ collaborative_filtering_id_in = var_set({
     var_named(cat_ids(max_id_len=4), "items")})
 sentence_str = var_sentence(10)
 
-# noinspection PyTypeChecker
-# because pyCharm sucks
-print(fmt_var(mnist_in))
-# noinspection PyTypeChecker
-# because pyCharm sucks
-print(fmt_var(mnist_out))
-print(fmt_var(imagenet_in))
-print(fmt_var(sentence_1hot))
-# noinspection PyTypeChecker
-# because pyCharm sucks
-print(fmt_var(iris_out))
-# noinspection PyTypeChecker
-# because pyCharm sucks
-print(fmt_var(iris_in))
-# noinspection PyTypeChecker
-# because pyCharm sucks
-print(fmt_var(movie_lens_1M_embedding_in))
-# noinspection PyTypeChecker
-# because pyCharm sucks
-print(fmt_var(collaborative_filtering_id_in))
-print(fmt_var(sentence_str))
+all_test_vars = (mnist_in, mnist_out, imagenet_in, sentence_1hot,
+                 iris_in, iris_in_clean, iris_out, movie_lens_1M_embedding_in,
+                 collaborative_filtering_id_in, sentence_str)
+
+for var in all_test_vars:
+    print(fmt_var(var))
+    print(str_hash(var, ignore_names=True))
+    print(str_hash(var, ignore_names=False))

@@ -14,6 +14,9 @@ class BaseVariable(Protocol):
     @abc.abstractmethod
     def fmt(self) -> str: ...
 
+    @abc.abstractmethod
+    def _asdict(self) -> dict: ...
+
 
 class OneSideSupported(NamedTuple):
     bound: float
@@ -55,7 +58,7 @@ class OneHot(NamedTuple):
 
 
 class NamedCategorical(NamedTuple):
-    names: List[str]
+    names: FrozenSet[str]
     type: BaseVariableType = 'named_categorical'
 
     def fmt(self) -> str:
@@ -99,7 +102,12 @@ class Gaussian(NamedTuple):
 class Dimension(NamedTuple):
     name: str
     len: int
-    positioned: bool = True
+
+    def str_hash(self, ignore_names: bool) -> str:
+        if ignore_names:
+            return f"D[{self.len}]"
+        else:
+            return f"D[{self.name}|{self.len}]"
 
 
 class VariableTensor(NamedTuple):
