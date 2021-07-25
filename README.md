@@ -12,3 +12,8 @@ A way to specify common variables of data inputs in the field of data science an
 
 ## NonGoals
 * compatability with any current stuff
+* easy to comprehend (simple is not easy)
+
+## Todo
+* For now the set nature of VariableGroup does not allow
+ shuffle-able variables of the same tensor type
