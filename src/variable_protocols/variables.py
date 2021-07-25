@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import FrozenSet, List, Dict, Set, Literal, Iterable
 
-from variable_protocols.hashed_tree_compare import str_hash
+from variable_protocols.hashed_tree import str_hash
 from variable_protocols.protocols import VariableTensor, Variable, VariableGroup, NamedVariable, VariableList, Bounded, \
     OneHot, CategoricalVector, Gaussian, Dimension, BaseVariable, UnNamedVariable, Ordinal, NamedCategorical, \
     OneSideSupported, Gamma, CategoryIds

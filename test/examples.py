@@ -1,8 +1,7 @@
-# float MNIST input
 from src.variable_protocols.variables import fmt_var, dim, bounded_float, var_tensor, var_scalar, one_hot, \
     cat_from_names, var_set, positive_float, var_named, cat_vec, cat_ids, var_ordered, var_array
 from src.variable_protocols.common_variables import var_image, var_sentence_1hot, var_sentence
-from variable_protocols.hashed_tree_compare import str_hash
+from src.variable_protocols.hashed_tree import str_hash
 
 # noinspection PyTypeChecker
 # because pyCharm sucks
