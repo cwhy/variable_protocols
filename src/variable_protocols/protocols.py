@@ -114,6 +114,7 @@ class VariableTensor(NamedTuple):
     var_type: BaseVariable
     dims: FrozenSet[Dimension]
     type: Literal['VariableTensor'] = 'VariableTensor'
+    positioned: bool = True
 
 
 class Variable(Protocol):
