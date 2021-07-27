@@ -16,25 +16,26 @@ the var is a BaseVariable <─────────────────�
            (no)│      └─── (yes)──> `BaseVariable`                              │
                v                                                                │
  the var consist of a group                                                     │
-  of same `Variable`s ────(no)─> `VariableGroup`, for all the variable types ───┤
+  of same `Variable`s ────(no)─> `VariableGroup`, for all the variable inside ──┤
               (yes)│                                                            │ 
                    v                                                            │
-the var has a fixed length ─(no)──> `VariableList`, for all the variable types ─┤
+the var has a fixed length ─(no)──> `VariableList`, for the variable type ──────┤
               (yes)│                                                            │
                    v                                                            │
    the group has N >= 2 dimensions ─(yes)────────> Nd `VariableTensor`          │
                (no)│                                                            │
                    v                                                            │
-   the group is shuffle-able ─(no)───────────────>  1d `VariableTensor`         │
-              (yes)│                                                            │
+   the group is shuffle-able ──(yes)────>   `VariableGroup` of length 1,        │
+                   │                        for all the variable inside ────────┤
+               (no)│                                                            │
                    v                                                            │
-             `VariableGroup` of length 1 [1], for all the variable types ───────┘
-
+   `VariableGroup` of `NamedVariable` [1],  for all the variable inside ────────┘
+            
 ```
 You got a variable.
 * [1] To prevent `NamedVariable`s of the same types collapsing inside a `VariableGroups`,
  which would be the same as an 1D `VariableTensor` we forbid 1D `VariableTensor`s and
- use `VariableGroup` instead.
+ use `VariableGroup` of `NamedVariable` instead.
 
 ## Examples
 see `test/examples.py`
