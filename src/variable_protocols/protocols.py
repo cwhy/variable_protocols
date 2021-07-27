@@ -1,9 +1,26 @@
 import abc
-from typing import Literal, Protocol, NamedTuple, Set, FrozenSet, List
+from typing import Literal, Protocol, NamedTuple, Set, FrozenSet, List, Tuple
 
 BaseVariableType = Literal['bounded', '1hot', '2vec', 'gaussian', 'gamma',
                            'ordinal', 'named_categorical', 'one_side_supported',
                            'category_ids']
+UnNamedVariableType = Literal[BaseVariableType,
+                              'VariableTensor',
+                              'VariableList',
+                              'VariableGroup']
+VariableType = Literal[UnNamedVariableType, 'VariableNamed']
+
+
+class Variable(Protocol):
+    @property
+    @abc.abstractmethod
+    def type(self) -> VariableType: ...
+
+
+class UnNamedVariable(Protocol):
+    @property
+    @abc.abstractmethod
+    def type(self) -> UnNamedVariableType: ...
 
 
 class BaseVariable(Protocol):
@@ -102,40 +119,23 @@ class Gaussian(NamedTuple):
 class Dimension(NamedTuple):
     name: str
     len: int
+    positioned: bool
 
     def str_hash(self, ignore_names: bool) -> str:
         if ignore_names:
-            return f"D[{self.len}]"
+            return f"D[{self.len}|{int(self.positioned)}]"
         else:
-            return f"D[{self.name}|{self.len}]"
+            return f"D[{self.name}|{self.len}|{int(self.positioned)}]"
 
 
 class VariableTensor(NamedTuple):
-    var_type: BaseVariable
+    var: Variable
     dims: FrozenSet[Dimension]
     type: Literal['VariableTensor'] = 'VariableTensor'
-    positioned: bool = True
-
-
-class Variable(Protocol):
-    @property
-    @abc.abstractmethod
-    def type(self) -> Literal['VariableTensor',
-                              'VariableList',
-                              'VariableGroup',
-                              'VariableNamed']: ...
-
-
-class UnNamedVariable(Protocol):
-    @property
-    @abc.abstractmethod
-    def type(self) -> Literal['VariableTensor',
-                              'VariableList',
-                              'VariableGroup']: ...
 
 
 class VariableGroup(NamedTuple):
-    vars: FrozenSet[Variable]
+    vars: FrozenSet[Tuple[Variable, int]]
     type: Literal['VariableGroup'] = 'VariableGroup'
 
 
