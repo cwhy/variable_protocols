@@ -1,14 +1,16 @@
 import abc
-from typing import Literal, Protocol, NamedTuple, Set, FrozenSet, List, Tuple
+from typing import Literal, Protocol, NamedTuple, Set, FrozenSet, List, Tuple, Optional
 
 BaseVariableType = Literal['bounded', '1hot', '2vec', 'gaussian', 'gamma',
                            'ordinal', 'named_categorical', 'one_side_supported',
                            'category_ids']
-UnNamedVariableType = Literal[BaseVariableType,
-                              'VariableTensor',
-                              'VariableList',
-                              'VariableGroup']
-VariableType = Literal[UnNamedVariableType, 'VariableNamed']
+
+UniqueVariableType = Literal[BaseVariableType,
+                             'VariableList',
+                             'VariableGroup']
+
+VariableType = Literal[UniqueVariableType,
+                       'VariableTensor']
 
 
 class Variable(Protocol):
@@ -17,10 +19,10 @@ class Variable(Protocol):
     def type(self) -> VariableType: ...
 
 
-class UnNamedVariable(Protocol):
+class UniqueVariable(Protocol):
     @property
     @abc.abstractmethod
-    def type(self) -> UnNamedVariableType: ...
+    def type(self) -> UniqueVariableType: ...
 
 
 class BaseVariable(Protocol):
@@ -129,23 +131,26 @@ class Dimension(NamedTuple):
 
 
 class VariableTensor(NamedTuple):
-    var: Variable
+    var: UniqueVariable
     dims: FrozenSet[Dimension]
+    name: Optional[str] = None
     type: Literal['VariableTensor'] = 'VariableTensor'
+
+    @classmethod
+    def build(cls, var: UniqueVariable, dims: FrozenSet[Dimension], name: Optional[str] = None):
+        if len(dims) != 0:
+            return cls(var, dims, name)
+        else:
+            raise ValueError("Empty dimension")
 
 
 class VariableGroup(NamedTuple):
-    vars: FrozenSet[Tuple[Variable, int]]
+    vars: FrozenSet[Variable]
+    name: Optional[str] = None
     type: Literal['VariableGroup'] = 'VariableGroup'
 
 
-class NamedVariable(NamedTuple):
-    var: UnNamedVariable
-    name: str
-    type: Literal['VariableNamed'] = 'VariableNamed'
-
-
 class VariableList(NamedTuple):
-    var: NamedVariable
+    var: Variable
     positioned: bool = True
     type: Literal['VariableList'] = 'VariableList'
