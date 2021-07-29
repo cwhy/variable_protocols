@@ -133,19 +133,14 @@ class Dimension(NamedTuple):
 class VariableTensor(NamedTuple):
     var: UniqueVariable
     dims: FrozenSet[Dimension]
+    id: str
     name: Optional[str] = None
     type: Literal['VariableTensor'] = 'VariableTensor'
 
-    @classmethod
-    def build(cls, var: UniqueVariable, dims: FrozenSet[Dimension], name: Optional[str] = None):
-        if len(dims) != 0:
-            return cls(var, dims, name)
-        else:
-            raise ValueError("Empty dimension")
 
-
+# Grouping Variables of different types
 class VariableGroup(NamedTuple):
-    vars: FrozenSet[Variable]
+    vars: FrozenSet[VariableTensor]
     name: Optional[str] = None
     type: Literal['VariableGroup'] = 'VariableGroup'
 
@@ -153,4 +148,5 @@ class VariableGroup(NamedTuple):
 class VariableList(NamedTuple):
     var: Variable
     positioned: bool = True
+    name: Optional[str] = None
     type: Literal['VariableList'] = 'VariableList'

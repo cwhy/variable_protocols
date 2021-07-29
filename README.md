@@ -11,25 +11,7 @@ A way to specify common variables of data inputs in the field of data science an
 ### Guideline
 You have a var, 
 ```
-the var is a BaseVariable <─────────────────────────────────────────────────────┐
-               │      │                                                         │
-           (no)│      └─── (yes)──> `BaseVariable`                              │
-               v                                                                │
- the var consist of a group                                                     │
-  of same `Variable`s ────(no)─> `VariableGroup`, for all the variable inside ──┤
-              (yes)│                                                            │ 
-                   v                                                            │
-the var has a fixed length ─(no)──> `VariableList`, for the variable type ──────┤
-              (yes)│                                                            │
-                   v                                                            │
-   the group has N >= 2 dimensions ─(yes)────────> Nd `VariableTensor`          │
-               (no)│                                                            │
-                   v                                                            │
-   the group is shuffle-able ──(yes)────>   `VariableGroup` of length 1,        │
-                   │                        for all the variable inside ────────┤
-               (no)│                                                            │
-                   v                                                            │
-   `VariableGroup` of `NamedVariable` [1],  for all the variable inside ────────┘
+
             
 ```
 You got a variable.
