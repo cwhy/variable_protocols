@@ -6,7 +6,6 @@ BaseVariableType = Literal['bounded', '1hot', '2vec', 'gaussian', 'gamma',
                            'category_ids']
 
 UniqueVariableType = Literal[BaseVariableType,
-                             'VariableList',
                              'VariableGroup']
 
 VariableType = Literal[UniqueVariableType,
@@ -119,34 +118,27 @@ class Gaussian(NamedTuple):
 
 
 class Dimension(NamedTuple):
-    name: str
-    len: int
+    id: Optional[str]
+    len: Optional[int]
     positioned: bool
+    label: Optional[str] = None
 
     def str_hash(self, ignore_names: bool) -> str:
-        if ignore_names:
-            return f"D[{self.len}|{int(self.positioned)}]"
-        else:
-            return f"D[{self.name}|{self.len}|{int(self.positioned)}]"
+        return f"D[{self.id}|{self.len}|{int(self.positioned)}]"
 
 
 class VariableTensor(NamedTuple):
     var: UniqueVariable
     dims: FrozenSet[Dimension]
-    id: str
-    name: Optional[str] = None
+    id: Optional[str] = None
+    label: Optional[str] = None
     type: Literal['VariableTensor'] = 'VariableTensor'
 
 
 # Grouping Variables of different types
 class VariableGroup(NamedTuple):
     vars: FrozenSet[VariableTensor]
-    name: Optional[str] = None
+    id: Optional[str] = None
+    label: Optional[str] = None
     type: Literal['VariableGroup'] = 'VariableGroup'
 
-
-class VariableList(NamedTuple):
-    var: Variable
-    positioned: bool = True
-    name: Optional[str] = None
-    type: Literal['VariableList'] = 'VariableList'
