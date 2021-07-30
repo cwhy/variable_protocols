@@ -31,6 +31,7 @@ see `test/examples.py`
 ## NonGoals
 * compatability with any current stuff
 * easy to comprehend (simple is not easy)
+* support nominal typing(only labels)
 
 ## Todo
 * For now the set nature of VariableGroup does not allow

@@ -1,144 +1,140 @@
+from __future__ import annotations
 import abc
-from typing import Literal, Protocol, NamedTuple, Set, FrozenSet, List, Tuple, Optional
+from typing import Literal, Protocol, NamedTuple, FrozenSet, Optional
+from variable_protocols.base_variables import BaseVariableType, BaseVariable, struct_hash_base_variable
 
-BaseVariableType = Literal['bounded', '1hot', '2vec', 'gaussian', 'gamma',
-                           'ordinal', 'named_categorical', 'one_side_supported',
-                           'category_ids']
-
-UniqueVariableType = Literal[BaseVariableType,
-                             'VariableGroup']
-
-VariableType = Literal[UniqueVariableType,
+VariableType = Literal['VariableGroup',
                        'VariableTensor']
+
+TensorBaseType = Literal[BaseVariableType,
+                         'VariableGroup',
+                         'VariableTensor']
+
+
+class TensorBase(Protocol):
+    @property
+    @abc.abstractmethod
+    def type(self) -> TensorBaseType: ...
 
 
 class Variable(Protocol):
     @property
     @abc.abstractmethod
+    def id(self) -> Optional[str]: ...
+
+    @property
+    @abc.abstractmethod
+    def label(self) -> Optional[str]: ...
+
+    @property
+    @abc.abstractmethod
     def type(self) -> VariableType: ...
 
 
-class UniqueVariable(Protocol):
-    @property
-    @abc.abstractmethod
-    def type(self) -> UniqueVariableType: ...
-
-
-class BaseVariable(Protocol):
-    @property
-    @abc.abstractmethod
-    def type(self) -> BaseVariableType: ...
-
-    @abc.abstractmethod
-    def fmt(self) -> str: ...
-
-    @abc.abstractmethod
-    def _asdict(self) -> dict: ...
-
-
-class OneSideSupported(NamedTuple):
-    bound: float
-    min_or_max: Literal["min", "max"]
-    type: BaseVariableType = 'one_side_supported'
-
-    def fmt(self) -> str:
-        if self.min_or_max == 'min':
-            return f"OneSideSupported(>={self.bound})"
-        else:
-            assert self.min_or_max == 'max'
-            return f"OneSideSupported(<={self.bound})"
-
-
-class Gamma(NamedTuple):
-    alpha: float
-    beta: float
-    type: BaseVariableType = 'gamma'
-
-    def fmt(self) -> str:
-        return f"Gamma({self.alpha}, {self.beta})"
-
-
-class Bounded(NamedTuple):
-    max: float
-    min: float
-    type: BaseVariableType = 'bounded'
-
-    def fmt(self) -> str:
-        return f"Bounded({self.min}, {self.max})"
-
-
-class OneHot(NamedTuple):
-    n_category: int
-    type: BaseVariableType = '1hot'
-
-    def fmt(self) -> str:
-        return f"OneHot({self.n_category})"
-
-
-class NamedCategorical(NamedTuple):
-    names: FrozenSet[str]
-    type: BaseVariableType = 'named_categorical'
-
-    def fmt(self) -> str:
-        return f"Categorical({', '.join(self.names)})"
-
-
-class CategoryIds(NamedTuple):
-    max_id_len: int
-    type: BaseVariableType = 'category_ids'
-
-    def fmt(self) -> str:
-        return f"CategoryIds(max_id_len={self.max_id_len})"
-
-
-class Ordinal(NamedTuple):
-    n_category: int
-    type: BaseVariableType = 'ordinal'
-
-    def fmt(self) -> str:
-        return f"Ordinal({self.n_category})"
-
-
-class CategoricalVector(NamedTuple):
-    n_category: int
-    n_embedding: int
-    type: BaseVariableType = '2vec'
-
-    def fmt(self) -> str:
-        return f"CategoricalVector({self.n_category}, n_embedding={self.n_embedding})"
-
-
-class Gaussian(NamedTuple):
-    mean: float = 0
-    var: float = 1
-    type: BaseVariableType = 'gaussian'
-
-    def fmt(self) -> str:
-        return f"Gaussian({self.mean}, {self.var})"
-
-
-class Dimension(NamedTuple):
-    id: Optional[str]
-    len: Optional[int]
+# Dimension Group
+class DimensionFamily(NamedTuple):
+    n_members: int
     positioned: bool
-    label: Optional[str] = None
+    label: str
+    len: Optional[int] = 1
 
-    def str_hash(self, ignore_names: bool) -> str:
-        return f"D[{self.id}|{self.len}|{int(self.positioned)}]"
+    @property
+    def struct_hash(self) -> str:
+        return f"D[{self.len}|{self.n_members}|{int(self.positioned)}]"
+
+    @property
+    def id(self) -> str:
+        return str(hash(self))[:5]
+
+    def fmt(self) -> str:
+        positioned = "shuffle-able" if self.positioned else ""
+        family = f"*{self.n_members}" if self.n_members > 1 else ""
+        return f"{self.label}[{self.len}|{positioned}]{family}"
 
 
+# Grouping Variables of the same type
 class VariableTensor(NamedTuple):
-    var: UniqueVariable
-    dims: FrozenSet[Dimension]
-    id: Optional[str] = None
+    var: TensorBase
+    dims: FrozenSet[DimensionFamily]
     label: Optional[str] = None
     type: Literal['VariableTensor'] = 'VariableTensor'
+
+    @property
+    def id(self) -> str:
+        return str(hash(self))[:5]
+
+    @property
+    def struct_hash(self) -> str:
+        dims = "|".join([d.struct_hash for d in self.dims])
+        return f"T[{self.id}|{struct_hash(self.var)}|[{dims}]]"
+
+    def fmt(self, indent: int = 2, curr_indent: int = 0) -> str:
+        var_type = fmt(self.var)
+        if len(self.dims) == 0:
+            return var_type
+        else:
+            header = "Tensor#"
+            dims = ", ".join(d.fmt() for d in self.dims)
+            if len(header) + len(var_type) + len(": ") + len(dims) > 70:
+                indent_spaces = (curr_indent + len(header) + indent) * ' '
+                return f"{header}{var_type}:\n{indent_spaces}{dims}"
+            else:
+                return f"{header}{var_type}: {dims}"
 
 
 # Grouping Variables of different types
 class VariableGroup(NamedTuple):
-    vars: FrozenSet[VariableTensor]
-    id: Optional[str] = None
+    vars: FrozenSet[Variable]
     label: Optional[str] = None
     type: Literal['VariableGroup'] = 'VariableGroup'
 
+    @property
+    def id(self) -> str:
+        return str(hash(self))[:5]
+
+    @property
+    def struct_hash(self) -> str:
+        _vars = "|".join([struct_hash(v) for v in self.vars])
+        return f"G[{self.id}|[{_vars}]]"
+
+    @classmethod
+    def make(cls,
+             _vars: FrozenSet[Variable],
+             label: Optional[str] = None) -> VariableGroup:
+        if len(_vars) > 1:
+            return VariableGroup(_vars, label)
+        else:
+            raise ValueError("Groups must be made of two Variables")
+
+    def fmt(self, indent: int = 2, curr_indent: int = 0) -> str:
+        s = "Set{\n"
+        curr_indent += indent
+        for i, var in enumerate(self.vars):
+            s += f"{fmt(var, indent=indent, curr_indent=curr_indent)},\n"
+        s = s.strip(",\n")
+        s += "}\n"
+        return s
+
+
+def struct_hash(var: TensorBase, ignore_names: bool = False) -> str:
+    if var.type == 'BaseVariable':
+        assert isinstance(var, BaseVariable)
+        return struct_hash_base_variable(var, ignore_names)
+    elif var.type == 'VariableTensor':
+        assert isinstance(var, VariableTensor)
+        return var.struct_hash
+    else:
+        assert isinstance(var, VariableGroup)
+        return var.struct_hash
+
+
+def fmt(var: TensorBase, **kwargs) -> str:
+    if var.type == 'BaseVariable':
+        assert isinstance(var, BaseVariable)
+        return var.fmt()
+    elif var.type == 'VariableTensor':
+        assert isinstance(var, VariableTensor)
+        return var.fmt(**kwargs)
+    else:
+        assert isinstance(var, VariableGroup)
+        return var.fmt(**kwargs)

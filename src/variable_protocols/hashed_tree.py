@@ -2,21 +2,10 @@ from __future__ import annotations
 
 from typing import List, Tuple, Optional
 
-from variable_protocols.protocols import Variable, NamedVariable, VariableGroup, VariableList, VariableTensor, \
-    BaseVariable
+from variable_protocols.protocols import Variable, NamedVariable, VariableGroup, VariableList, VariableTensor
+from variable_protocols.base_variables import BaseVariable
 
 
-def str_hash_base_variable(var: BaseVariable, ignore_names: bool) -> str:
-    # noinspection PyProtectedMember
-    # because python sucks
-    var_dict = var._asdict()
-    var_type = var_dict.pop("type")
-    if ignore_names:
-        var_dict.pop('name', None)
-        var_dict.pop('names', None)
-    content = "|".join(str(int(v)) if isinstance(v, bool) else str(v)
-                       for _, v in var_dict.items())
-    return f"B[{var_type}|{content}]"
 
 
 def str_hash(var: Variable, ignore_names: bool) -> str:

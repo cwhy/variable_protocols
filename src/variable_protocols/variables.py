@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import FrozenSet, List, Dict, Set, Literal, Iterable
 
 from variable_protocols.hashed_tree import str_hash
-from variable_protocols.protocols import VariableTensor, Variable, VariableGroup, NamedVariable, VariableList, Bounded, \
-    OneHot, CategoricalVector, Gaussian, Dimension, BaseVariable, UnNamedVariable, Ordinal, NamedCategorical, \
-    OneSideSupported, Gamma, CategoryIds
+from variable_protocols.protocols import VariableTensor, Variable, VariableGroup, NamedVariable, VariableList, \
+    DimensionFamily, UnNamedVariable
+from variable_protocols.base_variables import BaseVariable, OneSideSupported, Gamma, Bounded, OneHot, NamedCategorical, \
+    CategoryIds, Ordinal, CategoricalVector, Gaussian
 
 
 def bounded_float(min_val: float, max_val: float) -> Bounded:
@@ -86,11 +87,11 @@ def gaussian(mean: float, var: float) -> Gaussian:
         raise ValueError(f"Invalid variance(var) value: {var}")
 
 
-def dim(name: str, length: int) -> Dimension:
-    return Dimension(name, length)
+def dim(name: str, length: int) -> DimensionFamily:
+    return DimensionFamily(name, length)
 
 
-def var_tensor(var: BaseVariable, dims: Set[Dimension]) -> VariableTensor:
+def var_tensor(var: BaseVariable, dims: Set[DimensionFamily]) -> VariableTensor:
     if len(dims) <= 1:
         raise ValueError((
             "len(dims) <= 1:\n"
@@ -149,63 +150,3 @@ def var_named(var: BaseVariable, name: str) -> NamedVariable:
 
 def var_flex_len(var: NamedVariable, positioned: bool) -> VariableList:
     return VariableList(var, positioned)
-
-
-def fmt_dims(dims: FrozenSet[Dimension], indent: int = 0, curr_indent: int = 0) -> str:
-    s = ""
-    curr_indent += len(s) + indent
-    for d in dims:
-        s += f"{d.name}[{d.len}], "
-    s = s.strip(", ")
-    return s
-
-
-def fmt_var(g: Variable, indent: int = 2, curr_indent: int = 0) -> str:
-    if g.type == 'VariableNamed':
-        assert isinstance(g, NamedVariable)
-        header = curr_indent * " "
-        out = f"{header}{g.name}: {fmt_var(g.var, curr_indent)}"
-        if len(out) > 70:
-            s = header + f"{g.name}:\n" + (curr_indent + indent) * " "
-            s += fmt_var(g.var, indent, curr_indent)
-            return s
-        else:
-            return out
-    elif g.type == 'VariableGroup':
-        assert isinstance(g, VariableGroup)
-        s = "Set{\n"
-        curr_indent += indent
-        for i, var in enumerate(g.vars):
-            s += f"{fmt_var(var, indent, curr_indent)},\n"
-        s = s.strip(",\n")
-        s += "}\n"
-        return s
-    elif g.type == 'VariableList':
-        assert isinstance(g, VariableList)
-        header = "List("
-        # noinspection PyTypeChecker
-        # because pyCharm sucks
-        s_var = fmt_var(g.var)
-        if len(header) + len(s_var) > 70:
-            # noinspection PyTypeChecker
-            # because pyCharm sucks
-            return f"{header}{fmt_var(g.var, indent, curr_indent + len(header))}]"
-        else:
-            # noinspection PyTypeChecker
-            # because pyCharm sucks
-            return f"{header}{fmt_var(g.var)})"
-    elif g.type == 'VariableTensor':
-        assert isinstance(g, VariableTensor)
-        var_type = g.var_type.fmt()
-        if len(g.dims) == 0:
-            return var_type
-        else:
-            header = "Tensor#"
-            dims = fmt_dims(g.dims, indent, curr_indent)
-            if len(header) + len(var_type) + len(": ") + len(dims) > 70:
-                indent_spaces = (curr_indent + len(header) + indent) * ' '
-                return f"{header}{var_type}:\n{indent_spaces}{fmt_dims(g.dims, indent, curr_indent)}"
-            else:
-                return f"{header}{var_type}: {fmt_dims(g.dims, indent, curr_indent)}"
-    else:
-        raise Exception(f"Unexpected Variable type {g.type}")
