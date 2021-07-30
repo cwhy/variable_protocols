@@ -19,19 +19,6 @@ class BaseVariable(Protocol):
     def _asdict(self) -> dict: ...
 
 
-@runtime_checkable
-class CustomHashBaseVariable(Protocol):
-    @property
-    @abc.abstractmethod
-    def type(self) -> BaseVariableType: ...
-
-    @abc.abstractmethod
-    def fmt(self) -> str: ...
-
-    @abc.abstractmethod
-    def struct_hash(self, ignore_names: bool) -> str: ...
-
-
 class OneSideSupported(NamedTuple):
     bound: float
     min_or_max: Literal["min", "max"]

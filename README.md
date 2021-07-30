@@ -32,6 +32,8 @@ see `test/examples.py`
 * compatability with any current stuff
 * easy to comprehend (simple is not easy)
 * support nominal typing(only labels)
+* no @runtime_checkable because not reliable
+  * only allow in asserts
 
 ## Todo
 * For now the set nature of VariableGroup does not allow

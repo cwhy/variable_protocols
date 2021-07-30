@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import FrozenSet, List, Dict, Set, Literal, Iterable
+from typing import List, Dict, Set, Literal, Iterable, Optional
 
-from variable_protocols.hashed_tree import str_hash
-from variable_protocols.protocols import VariableTensor, Variable, VariableGroup, NamedVariable, VariableList, \
-    DimensionFamily, UnNamedVariable
-from variable_protocols.base_variables import BaseVariable, OneSideSupported, Gamma, Bounded, OneHot, NamedCategorical, \
+from variable_protocols.base_variables import BaseVariable, \
+    OneSideSupported, Gamma, Bounded, OneHot, NamedCategorical, \
     CategoryIds, Ordinal, CategoricalVector, Gaussian
+from variable_protocols.protocols import VariableTensor, Variable, \
+    VariableGroup, DimensionFamily
 
 
 def bounded_float(min_val: float, max_val: float) -> Bounded:
@@ -87,19 +87,15 @@ def gaussian(mean: float, var: float) -> Gaussian:
         raise ValueError(f"Invalid variance(var) value: {var}")
 
 
-def dim(name: str, length: int) -> DimensionFamily:
-    return DimensionFamily(name, length)
+def dim(name: str,
+        length: Optional[int],
+        positioned: bool = True,
+        n_members: int = 1) -> DimensionFamily:
+    return DimensionFamily(label=name, len=length,
+                           n_members=n_members, positioned=positioned)
 
 
 def var_tensor(var: BaseVariable, dims: Set[DimensionFamily]) -> VariableTensor:
-    if len(dims) <= 1:
-        raise ValueError((
-            "len(dims) <= 1:\n"
-            "Creation if 1D tensor is not allowed "
-            "to avoid duplicate representations, "
-            "use var_array instead. "
-            "To create scalars, use var_scalar."
-        ))
     return VariableTensor(var, frozenset(dims))
 
 
@@ -107,46 +103,30 @@ def var_scalar(var: BaseVariable) -> VariableTensor:
     return VariableTensor(var, frozenset())
 
 
-def var_set(vars_set: Set[Variable]) -> VariableGroup:
+def var_group(vars_set: Set[Variable]) -> VariableGroup:
     assert isinstance(vars_set, set)
     if len(vars_set) <= 1:
         raise ValueError("A variable set/group must contain more than one variable")
     return VariableGroup(frozenset(vars_set))
 
 
-def var_dict(vars_dict: Dict[str, UnNamedVariable]) -> VariableGroup:
-    return var_set({
-        add_name(var, name)
-        for name, var in vars_dict.items()
+def var_unique(var: Variable, name: str) -> VariableTensor:
+    return VariableTensor(var, frozenset(), label=name)
+
+
+def var_dict(vars_dict: Dict[Variable, str]) -> VariableGroup:
+    return var_group({
+        var_unique(var, name)
+        for var, name in vars_dict.items()
     })
 
 
-def var_ordered(vars_list: List[UnNamedVariable]) -> VariableGroup:
-    return var_set({
-        add_name(var, str(i))
+def var_ordered(vars_list: List[Variable]) -> VariableGroup:
+    if not len(vars_list) == len(set(vars_list)):
+        raise ValueError("There are duplicate variables in input,"
+                         "use var_tensor to combine them first,"
+                         "or var_unique to make them unique")
+    return var_group({
+        var_unique(var, str(i))
         for i, var in enumerate(vars_list)
     })
-
-
-def var_array(var: BaseVariable, length: int) -> VariableGroup:
-    # noinspection PyTypeChecker
-    # because pyCharm sucks
-    return var_ordered([var_scalar(var)] * length)
-
-
-def add_name(var: UnNamedVariable, name: str) -> NamedVariable:
-    if isinstance(var, NamedVariable):
-        # noinspection PyTypeChecker
-        # because pyCharm sucks
-        raise ValueError(f"var {fmt_var(var)} is already named")
-    return NamedVariable(var, name)
-
-
-def var_named(var: BaseVariable, name: str) -> NamedVariable:
-    # noinspection PyTypeChecker
-    # because pyCharm sucks
-    return add_name(var_scalar(var), name)
-
-
-def var_flex_len(var: NamedVariable, positioned: bool) -> VariableList:
-    return VariableList(var, positioned)

@@ -33,10 +33,10 @@ class Variable(Protocol):
 
 # Dimension Group
 class DimensionFamily(NamedTuple):
-    n_members: int
     positioned: bool
     label: str
-    len: Optional[int] = 1
+    len: Optional[int]
+    n_members: int = 1
 
     @property
     def struct_hash(self) -> str:
@@ -47,9 +47,9 @@ class DimensionFamily(NamedTuple):
         return str(hash(self))[:5]
 
     def fmt(self) -> str:
-        positioned = "shuffle-able" if self.positioned else ""
         family = f"*{self.n_members}" if self.n_members > 1 else ""
-        return f"{self.label}[{self.len}|{positioned}]{family}"
+        positioned = "|shuffle-able" if not self.positioned else ""
+        return f"{self.label}[{self.len}{positioned}]{family}"
 
 
 # Grouping Variables of the same type
@@ -117,8 +117,7 @@ class VariableGroup(NamedTuple):
 
 
 def struct_hash(var: TensorBase, ignore_names: bool = False) -> str:
-    if var.type == 'BaseVariable':
-        assert isinstance(var, BaseVariable)
+    if isinstance(var, BaseVariable):
         return struct_hash_base_variable(var, ignore_names)
     elif var.type == 'VariableTensor':
         assert isinstance(var, VariableTensor)
@@ -129,12 +128,13 @@ def struct_hash(var: TensorBase, ignore_names: bool = False) -> str:
 
 
 def fmt(var: TensorBase, **kwargs) -> str:
-    if var.type == 'BaseVariable':
-        assert isinstance(var, BaseVariable)
+    if isinstance(var, BaseVariable):
         return var.fmt()
     elif var.type == 'VariableTensor':
         assert isinstance(var, VariableTensor)
         return var.fmt(**kwargs)
     else:
+        print(var)
+        print(type(var))
         assert isinstance(var, VariableGroup)
         return var.fmt(**kwargs)

@@ -1,6 +1,6 @@
 from variable_protocols.protocols import Variable
-from variable_protocols.variables import var_tensor, dim, bounded_float, ordinal, var_flex_len, add_name, one_hot, \
-    var_scalar, var_named, cat_ids, cat_vec
+from variable_protocols.variables import var_tensor, dim, bounded_float, ordinal, one_hot, \
+    var_scalar, var_unique, cat_ids, cat_vec
 
 
 # noinspection PyTypeChecker
@@ -15,16 +15,16 @@ def var_image(h: int, w: int, n_channels: int = 3, int_format: bool = False) -> 
 # noinspection PyTypeChecker
 # because pycharm sucks
 def var_sentence_1hot(n_vocab: int) -> Variable:
-    return var_flex_len(var_named(one_hot(n_vocab), "word"), positioned=True)
+    return var_tensor(one_hot(n_vocab), {dim("word", None)})
 
 
 # noinspection PyTypeChecker
 # because pycharm sucks
 def var_sentence(longest_word_len: int) -> Variable:
-    return var_flex_len(var_named(cat_ids(longest_word_len), "word"), positioned=True)
+    return var_tensor(cat_ids(longest_word_len), {dim("word", None)})
 
 
 # noinspection PyTypeChecker
 # because pycharm sucks
 def var_sentence_embeddings(n_vocab: int, size_embedding: int) -> Variable:
-    return var_flex_len(var_named(cat_vec(n_vocab, size_embedding), "word"), positioned=True)
+    return var_tensor(cat_vec(n_vocab, size_embedding), {dim("word", None)})

@@ -1,4 +1,4 @@
-from src.variable_protocols.variables import var_set, positive_float, var_named, var_array
+from src.variable_protocols.variables import var_group, positive_float, var_unique
 from src.variable_protocols.hashed_tree import HashedTree
 
 ft_names = [
@@ -12,7 +12,7 @@ cat_names = ["Setosa", "Versicolour", "Virginica"]
 
 # noinspection PyTypeChecker
 # because pyCharm sucks
-iris_in = var_set({var_named(positive_float(), name) for name in ft_names})
+iris_in = var_group({var_unique(positive_float(), name) for name in ft_names})
 
 # noinspection PyTypeChecker
 # because pyCharm sucks
