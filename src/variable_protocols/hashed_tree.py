@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Tuple, Optional, FrozenSet
+from collections import defaultdict
+from typing import List, Tuple, Optional, FrozenSet, Any, Dict, Set
 
 from variable_protocols.protocols import Variable, VariableGroup, struct_hash, VariableTensor
 
@@ -19,7 +20,7 @@ class HashedTree:
             assert isinstance(var, VariableTensor)
             if var.var.type == 'BaseVariable':
                 self.children: List[HashedTree] = []
-                self.nodes: List[HashedTree] = []
+                self.nodes: List[HashedTree] = [self]
             else:
                 assert isinstance(var.var, VariableGroup)
                 subtree = HashedTree(var.var)
@@ -37,7 +38,13 @@ class HashedTree:
             raise Exception(f"Unexpected Variable type {var.type}")
 
         if is_root:
-            self.node_idx = {node: i for i, node in enumerate(self.nodes)}
+            self.node_idx: Optional[Dict[HashedTree, int]] = {node: i for i, node in enumerate(self.nodes)}
+            self.hash_dict: Optional[Dict[str, Set[HashedTree]]] = defaultdict(set)
+            for n in self.nodes:
+                self.hash_dict[n.hash].add(n)
+        else:
+            self.hash_dict = None
+            self.node_idx = None
 
 
 def check(t1: HashedTree, t2: HashedTree) -> bool:
@@ -45,16 +52,34 @@ def check(t1: HashedTree, t2: HashedTree) -> bool:
 
 
 DiffNode = HashedTree
-DiffResult = List[Tuple[FrozenSet[DiffNode], FrozenSet[DiffNode]]]
 
 
-def diff(t1: HashedTree, t2: HashedTree) -> DiffResult:
+def diff(t1: HashedTree, t2: HashedTree) -> Tuple[Dict[str, int], Dict[str, int]]:
+    if t1.hash_dict is None or t2.hash_dict is None:
+        raise ValueError("Either tree entered for compare is not root")
+    else:
+        d1, d2 = t1.hash_dict, t2.hash_dict
+        common_keys = set(d1).intersection(set(d2))
+        t1_special = {k: len(d1[k]) for k in set(d1) - common_keys}
+        t2_special = {k: len(d2[k]) for k in set(d2) - common_keys}
+        for k in common_keys:
+            if len(d1[k]) > len(d2[k]):
+                t1_special[k] = len(d1[k]) - len(d2[k])
+            elif len(d1[k]) < len(d2[k]):
+                t2_special[k] = len(d2[k]) - len(d1[k])
+        return t1_special, t2_special
+
+
+DiffResultTr = List[Tuple[FrozenSet[DiffNode], FrozenSet[DiffNode]]]
+
+
+def diff_tr(t1: HashedTree, t2: HashedTree) -> DiffResultTr:
     assert t1.is_root
     assert t2.is_root
     return diff_helper(t1, t2)
 
 
-def diff_helper(t1: HashedTree, t2: HashedTree) -> DiffResult:
+def diff_helper(t1: HashedTree, t2: HashedTree) -> DiffResultTr:
     if t1.hash == t2.hash:
         return []
     elif t1.children is None:
