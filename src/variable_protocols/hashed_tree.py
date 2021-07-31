@@ -1,41 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, FrozenSet
 
-from variable_protocols.protocols import Variable, NamedVariable, VariableGroup, VariableList, VariableTensor
-from variable_protocols.base_variables import BaseVariable
-
-
-
-
-def str_hash(var: Variable, ignore_names: bool) -> str:
-    if var.type == 'VariableNamed':
-        assert isinstance(var, NamedVariable)
-        content = str_hash(var.var, ignore_names)
-        if ignore_names:
-            # only the names are ignores, identity remains
-            return f"N[{content}]"
-        else:
-            return f"N[{var.name}|{content}]"
-    elif var.type == 'VariableGroup':
-        assert isinstance(var, VariableGroup)
-        hashes = sorted(str_hash(var, ignore_names) for var in var.vars)
-        return f"G[{'|'.join(hashes)}]"
-    elif var.type == 'VariableList':
-        assert isinstance(var, VariableList)
-        # noinspection PyTypeChecker
-        # because pycharm sucks
-        return f"L[{str_hash(var.var, ignore_names)}|{int(var.positioned)}]"
-    elif var.type == 'VariableTensor':
-        assert isinstance(var, VariableTensor)
-        base_type = str_hash_base_variable(var.var_type, ignore_names)
-        if len(var.dims) > 0:
-            dims = "|".join([d.str_hash(ignore_names) for d in var.dims])
-            return f"T[{base_type}|[{dims}]]"
-        else:
-            return f"S[{base_type}]"
-    else:
-        raise Exception(f"Unexpected Variable type {var.type}")
+from variable_protocols.protocols import Variable, VariableGroup, struct_hash, VariableTensor
 
 
 # noinspection PyTypeChecker
@@ -44,70 +11,78 @@ class HashedTree:
     def __init__(self, var: Variable,
                  ignore_names: bool = True,
                  is_root: bool = True) -> None:
-        self.hash = str_hash(var, ignore_names)
+        self.hash = struct_hash(var, ignore_names)
         self.is_root = is_root
         self.id: Optional[int] = None
 
-        if var.type in ('VariableNamed', 'VariableList', 'VariableTensor'):
-            assert isinstance(var, NamedVariable)
-            self.children: List[HashedTree] = []
-            self.nodes: List[HashedTree] = []
+        if var.type == 'VariableTensor':
+            assert isinstance(var, VariableTensor)
+            if var.var.type == 'BaseVariable':
+                self.children: List[HashedTree] = []
+                self.nodes: List[HashedTree] = []
+            else:
+                assert isinstance(var.var, VariableGroup)
+                subtree = HashedTree(var.var)
+                self.children = [subtree]
+                self.nodes = self.children + subtree.nodes
+
         elif var.type == 'VariableGroup':
             assert isinstance(var, VariableGroup)
-            self.children = frozenset(
-                HashedTree(var, ignore_names, is_root=False) for var in var.vars
-            )
+            self.children = list(sorted(
+                (HashedTree(var, ignore_names, is_root=False) for var in var.vars),
+                key=lambda x: x.hash
+            ))
             self.nodes = sum([c.nodes for c in self.children], [])
         else:
             raise Exception(f"Unexpected Variable type {var.type}")
+
         if is_root:
             self.node_idx = {node: i for i, node in enumerate(self.nodes)}
-            queue = [self]
-            while queue:
-                node = queue.pop(0)
-                node.id = self.node_idx[node]
-                if var.type == 'VariableGroup':
-                    assert isinstance(var, VariableGroup)
-                    queue += node.children
-                else:
-                    if var.type not in ('VariableNamed', 'VariableList', 'VariableTensor'):
-                        raise Exception(f"Unexpected Variable type {var.type}")
 
 
-def compare(t1: HashedTree, t2: HashedTree) -> bool:
+def check(t1: HashedTree, t2: HashedTree) -> bool:
     return t1.hash == t2.hash
 
 
 DiffNode = HashedTree
-DiffResult = List[Tuple[Optional[DiffNode], Optional[DiffNode]]]
+DiffResult = List[Tuple[FrozenSet[DiffNode], FrozenSet[DiffNode]]]
 
 
 def diff(t1: HashedTree, t2: HashedTree) -> DiffResult:
     assert t1.is_root
     assert t2.is_root
-    return diff_helper(t1, t2, [])
+    return diff_helper(t1, t2)
 
 
-def diff_helper(t1: HashedTree, t2: HashedTree, results: DiffResult) -> DiffResult:
-    if t1.children is None:
+def diff_helper(t1: HashedTree, t2: HashedTree) -> DiffResult:
+    if t1.hash == t2.hash:
+        return []
+    elif t1.children is None:
         if t2.children is not None:
-            results.append((t1, t2))
-        return results
-    elif t2.children is not None:
-        results.append((t1, t2))
-        return results
+            return [(frozenset([t1]), frozenset([t2]))]
+        return []
+    elif t2.children is None:
+        return [(frozenset([t1]), frozenset([t2]))]
     else:
         tc1 = set(t1.children)
-        tc2 = set(t1.children)
+        tc2 = set(t2.children)
+        tc1_hd = {n.hash: n for n in t1.children}
+        tc2_hd = {n.hash: n for n in t2.children}
         g1, g2 = set(), set()
         for n1 in t1.children:
-            if n1 in t2.children:
-                tc2.remove(n1)
+            if n1.hash in tc2_hd:
+                print(n1.hash, tc2_hd[n1.hash].hash)
+                print(n1, tc2_hd[n1.hash])
+                tc2.remove(tc2_hd[n1.hash])
+                tc1.remove(n1)
             else:
                 g1.add(n1)
         for n2 in t2.children:
-            if n2 in t1.children:
-                tc1.remove(n2)
+            if n2.hash in tc1_hd:
+                tc1.remove(tc1_hd[n2.hash])
+                tc2.remove(n2)
             else:
                 g2.add(n2)
-
+        if len(tc1) == 0 and len(tc2) == 0:
+            raise Exception("This should not happen")
+        return [(frozenset(tc1), frozenset(tc2))]
