@@ -1,12 +1,12 @@
 from __future__ import annotations
 import abc
 from typing import Literal, Protocol, NamedTuple, FrozenSet, Optional
-from variable_protocols.base_variables import BaseVariableType, BaseVariable, struct_hash_base_variable
+from variable_protocols.base_variables import BaseVariable, struct_hash_base_variable
 
 VariableType = Literal['VariableGroup',
                        'VariableTensor']
 
-TensorBaseType = Literal[BaseVariableType,
+TensorBaseType = Literal['BaseVariable',
                          'VariableGroup',
                          'VariableTensor']
 
@@ -61,17 +61,23 @@ class VariableTensor(NamedTuple):
 
     @property
     def id(self) -> str:
-        return str(hash(self))[:5]
+        return str(hash(self))[-4:]
 
     @property
     def struct_hash(self) -> str:
-        dims = "|".join([d.struct_hash for d in self.dims])
-        return f"T[{self.id}|{struct_hash(self.var)}|[{dims}]]"
+        if len(self.dims) == 0:
+            return f"T[{struct_hash(self.var)}]"
+        else:
+            dims = ",".join([d.struct_hash for d in self.dims])
+            return f"T[{struct_hash(self.var)}|[{dims}]]"
 
     def fmt(self, indent: int = 2, curr_indent: int = 0) -> str:
         var_type = fmt(self.var)
         if len(self.dims) == 0:
-            return var_type
+            if self.label is None:
+                return curr_indent*" " + var_type
+            else:
+                return curr_indent*" " + f"{self.label}: {var_type}"
         else:
             header = "Tensor#"
             dims = ", ".join(d.fmt() for d in self.dims)
@@ -90,12 +96,12 @@ class VariableGroup(NamedTuple):
 
     @property
     def id(self) -> str:
-        return str(hash(self))[:5]
+        return str(hash(self))[-4:]
 
     @property
     def struct_hash(self) -> str:
-        _vars = "|".join([struct_hash(v) for v in self.vars])
-        return f"G[{self.id}|[{_vars}]]"
+        _vars = ",".join([struct_hash(v) for v in self.vars])
+        return f"G[{_vars}]"
 
     @classmethod
     def make(cls,
@@ -110,14 +116,18 @@ class VariableGroup(NamedTuple):
         s = "Set{\n"
         curr_indent += indent
         for i, var in enumerate(self.vars):
-            s += f"{fmt(var, indent=indent, curr_indent=curr_indent)},\n"
+            if self.label is None:
+                s += f"{fmt(var, indent=indent, curr_indent=curr_indent)},\n"
+            else:
+                s += f"{self.label}: {fmt(var, indent=indent, curr_indent=curr_indent)},\n"
         s = s.strip(",\n")
         s += "}\n"
         return s
 
 
 def struct_hash(var: TensorBase, ignore_names: bool = False) -> str:
-    if isinstance(var, BaseVariable):
+    if var.type == 'BaseVariable':
+        assert isinstance(var, BaseVariable)
         return struct_hash_base_variable(var, ignore_names)
     elif var.type == 'VariableTensor':
         assert isinstance(var, VariableTensor)
@@ -128,13 +138,12 @@ def struct_hash(var: TensorBase, ignore_names: bool = False) -> str:
 
 
 def fmt(var: TensorBase, **kwargs) -> str:
-    if isinstance(var, BaseVariable):
+    if var.type == 'BaseVariable':
+        assert isinstance(var, BaseVariable)
         return var.fmt()
     elif var.type == 'VariableTensor':
         assert isinstance(var, VariableTensor)
         return var.fmt(**kwargs)
     else:
-        print(var)
-        print(type(var))
         assert isinstance(var, VariableGroup)
         return var.fmt(**kwargs)

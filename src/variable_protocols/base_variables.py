@@ -1,13 +1,15 @@
 import abc
 from typing import Literal, Protocol, NamedTuple, FrozenSet, runtime_checkable
 
-BaseVariableType = Literal['bounded', '1hot', '2vec', 'gaussian', 'gamma',
-                           'ordinal', 'named_categorical', 'one_side_supported',
-                           'category_ids']
+BaseVariableType = Literal['BaseVariable']
 
 
 @runtime_checkable
 class BaseVariable(Protocol):
+    @property
+    @abc.abstractmethod
+    def type_name(self) -> str: ...
+
     @property
     @abc.abstractmethod
     def type(self) -> BaseVariableType: ...
@@ -19,10 +21,28 @@ class BaseVariable(Protocol):
     def _asdict(self) -> dict: ...
 
 
+@runtime_checkable
+class CustomHashBaseVariable(Protocol):
+    @property
+    @abc.abstractmethod
+    def type_name(self) -> str: ...
+
+    @property
+    @abc.abstractmethod
+    def type(self) -> BaseVariableType: ...
+
+    @abc.abstractmethod
+    def fmt(self) -> str: ...
+
+    @abc.abstractmethod
+    def struct_hash(self, ignore_names: bool) -> str: ...
+
+
 class OneSideSupported(NamedTuple):
     bound: float
     min_or_max: Literal["min", "max"]
-    type: BaseVariableType = 'one_side_supported'
+    type_name: str = 'one_side_supported'
+    type: Literal['BaseVariable'] = 'BaseVariable'
 
     def fmt(self) -> str:
         if self.min_or_max == 'min':
@@ -35,7 +55,8 @@ class OneSideSupported(NamedTuple):
 class Gamma(NamedTuple):
     alpha: float
     beta: float
-    type: BaseVariableType = 'gamma'
+    type_name: str = 'gamma'
+    type: Literal['BaseVariable'] = 'BaseVariable'
 
     def fmt(self) -> str:
         return f"Gamma({self.alpha}, {self.beta})"
@@ -44,7 +65,8 @@ class Gamma(NamedTuple):
 class Bounded(NamedTuple):
     max: float
     min: float
-    type: BaseVariableType = 'bounded'
+    type_name: str = 'bounded'
+    type: Literal['BaseVariable'] = 'BaseVariable'
 
     def fmt(self) -> str:
         return f"Bounded({self.min}, {self.max})"
@@ -52,7 +74,8 @@ class Bounded(NamedTuple):
 
 class OneHot(NamedTuple):
     n_category: int
-    type: BaseVariableType = '1hot'
+    type_name: str = '1hot'
+    type: Literal['BaseVariable'] = 'BaseVariable'
 
     def fmt(self) -> str:
         return f"OneHot({self.n_category})"
@@ -60,7 +83,8 @@ class OneHot(NamedTuple):
 
 class NamedCategorical(NamedTuple):
     names: FrozenSet[str]
-    type: BaseVariableType = 'named_categorical'
+    type_name: str = 'named_categorical'
+    type: Literal['BaseVariable'] = 'BaseVariable'
 
     def fmt(self) -> str:
         return f"Categorical({', '.join(self.names)})"
@@ -68,13 +92,14 @@ class NamedCategorical(NamedTuple):
     def struct_hash(self, ignore_names: bool) -> str:
         content = (
             str(len(self.names)) if ignore_names
-            else f"[{'|'.join(self.names)}]")
-        return f"B[{self.type}|{content}]"
+            else f"[{','.join(self.names)}]")
+        return f"B[{self.type_name}|{content}]"
 
 
 class CategoryIds(NamedTuple):
     max_id_len: int
-    type: BaseVariableType = 'category_ids'
+    type_name: str = 'category_ids'
+    type: Literal['BaseVariable'] = 'BaseVariable'
 
     def fmt(self) -> str:
         return f"CategoryIds(max_id_len={self.max_id_len})"
@@ -82,7 +107,8 @@ class CategoryIds(NamedTuple):
 
 class Ordinal(NamedTuple):
     n_category: int
-    type: BaseVariableType = 'ordinal'
+    type_name: str = 'ordinal'
+    type: Literal['BaseVariable'] = 'BaseVariable'
 
     def fmt(self) -> str:
         return f"Ordinal({self.n_category})"
@@ -91,7 +117,8 @@ class Ordinal(NamedTuple):
 class CategoricalVector(NamedTuple):
     n_category: int
     n_embedding: int
-    type: BaseVariableType = '2vec'
+    type_name: str = '2vec'
+    type: Literal['BaseVariable'] = 'BaseVariable'
 
     def fmt(self) -> str:
         return f"CategoricalVector({self.n_category}, n_embedding={self.n_embedding})"
@@ -100,7 +127,8 @@ class CategoricalVector(NamedTuple):
 class Gaussian(NamedTuple):
     mean: float = 0
     var: float = 1
-    type: BaseVariableType = 'gaussian'
+    type_name: str = 'gaussian'
+    type: Literal['BaseVariable'] = 'BaseVariable'
 
     def fmt(self) -> str:
         return f"Gaussian({self.mean}, {self.var})"
@@ -113,7 +141,8 @@ def struct_hash_base_variable(var: BaseVariable, ignore_names: bool) -> str:
         # noinspection PyProtectedMember
         # Because Pycharm sucks
         var_dict = var._asdict()
-        var_type = var_dict.pop("type")
+        var_dict.pop("type")
+        var_type = var_dict.pop("type_name")
         content = "|".join(str(int(v)) if isinstance(v, bool) else str(v)
                            for _, v in var_dict.items())
         return f"B[{var_type}|{content}]"

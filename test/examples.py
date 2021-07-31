@@ -33,5 +33,7 @@ all_test_vars = dict(
 
 for var_name, var in all_test_vars.items():
     print(var_name, fmt(var))
-    print(struct_hash(var, ignore_names=True))
-    print(struct_hash(var, ignore_names=False))
+for var_name, var in all_test_vars.items():
+    print(var_name, struct_hash(var, ignore_names=True))
+for var_name, var in all_test_vars.items():
+    print(var_name, struct_hash(var, ignore_names=False))
