@@ -9,15 +9,9 @@ A way to specify common variables of data inputs in the field of data science an
 * Only one representation for each variable type
 * See `variable_protocols/variable_protocols.py`
 ### Guideline
-You have a var, 
-```
-
-            
-```
-You got a variable.
-* [1] To prevent `NamedVariable`s of the same types collapsing inside a `VariableGroups`,
- which would be the same as an 1D `VariableTensor` we forbid 1D `VariableTensor`s and
- use `VariableGroup` of `NamedVariable` instead.
+* Use functions in `variables.py` to create variables
+* 'VariableGroup' groups different type of Variables
+* 'VariableTensor' groups same type of Variables
 
 ## Examples
 see `test/examples.py`
