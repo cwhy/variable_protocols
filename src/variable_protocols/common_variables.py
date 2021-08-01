@@ -1,6 +1,6 @@
 from variable_protocols.protocols import Variable
 from variable_protocols.variables import var_tensor, dim, bounded_float, ordinal, one_hot, \
-    var_scalar, var_unique, cat_ids, cat_vec
+    cat_ids, cat_vec
 
 
 # noinspection PyTypeChecker

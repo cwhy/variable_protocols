@@ -30,6 +30,9 @@ class Variable(Protocol):
     @abc.abstractmethod
     def type(self) -> VariableType: ...
 
+    @abc.abstractmethod
+    def __hash__(self) -> int: ...
+
 
 # Dimension Group
 class DimensionFamily(NamedTuple):
@@ -75,9 +78,9 @@ class VariableTensor(NamedTuple):
         var_type = fmt(self.var)
         if len(self.dims) == 0:
             if self.label is None:
-                return curr_indent*" " + var_type
+                return curr_indent * " " + var_type
             else:
-                return curr_indent*" " + f"{self.label}: {var_type}"
+                return curr_indent * " " + f"{self.label}: {var_type}"
         else:
             header = "Tensor#"
             dims = ", ".join(d.fmt() for d in self.dims)
@@ -86,6 +89,11 @@ class VariableTensor(NamedTuple):
                 return f"{header}{var_type}:\n{indent_spaces}{dims}"
             else:
                 return f"{header}{var_type}: {dims}"
+
+    def __hash__(self) -> int:
+        # noinspection PyTypeChecker
+        # because pyCharm sucks
+        return hash(struct_hash(self))
 
 
 # Grouping Variables of different types
@@ -124,6 +132,11 @@ class VariableGroup(NamedTuple):
         s += "}\n"
         return s
 
+    def __hash__(self) -> int:
+        # noinspection PyTypeChecker
+        # because pyCharm sucks
+        return hash(struct_hash(self))
+
 
 def struct_hash(var: TensorBase, ignore_names: bool = False) -> str:
     if var.type == 'BaseVariable':
@@ -147,3 +160,7 @@ def fmt(var: TensorBase, **kwargs) -> str:
     else:
         assert isinstance(var, VariableGroup)
         return var.fmt(**kwargs)
+
+
+def struct_check(var1: Variable, var2: Variable, ignore_names: bool = False):
+    return struct_hash(var1, ignore_names) == struct_hash(var2, ignore_names)

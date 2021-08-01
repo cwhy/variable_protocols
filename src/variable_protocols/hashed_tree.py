@@ -47,7 +47,7 @@ class HashedTree:
             self.node_idx = None
 
 
-def check(t1: HashedTree, t2: HashedTree) -> bool:
+def check_tr(t1: HashedTree, t2: HashedTree) -> bool:
     return t1.hash == t2.hash
 
 

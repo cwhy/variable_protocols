@@ -1,71 +1,69 @@
+from __future__ import annotations
 from abc import abstractmethod
-from collections import defaultdict
-from typing import Protocol, TypeVar, Dict, Set
+from typing import Protocol, List, Optional, NamedTuple
 
-from variable_protocols.variables import VariablePort, VarTensor
-from variable_protocols.protocols import VariableGroup
+from variable_protocols.protocols import Variable, struct_check, fmt
 
 
 class Transformation(Protocol):
     @property
     @abstractmethod
-    def source(self) -> VariablePort: ...
+    def source(self) -> Variable: ...
 
     @property
     @abstractmethod
-    def target(self) -> VariablePort: ...
+    def target(self) -> Variable: ...
 
     @property
     @abstractmethod
     def name(self) -> str: ...
 
 
-LookUpTable = Dict[VariablePort, Set[Transformation]]
-lookup_table_source: LookUpTable = defaultdict(set)
-lookup_table_target: LookUpTable = defaultdict(set)
+Tr = Transformation
 
 
-def register_(transformation: Transformation):
-    lookup_table_source[transformation.source].add(transformation)
-    lookup_table_target[transformation.source].add(transformation)
+class NewTransformation(NamedTuple):
+    source: Variable
+    target: Variable
+    name: str
 
 
-def strict_check_(transformation: Transformation,
-                  source: VariablePort,
-                  target: VariablePort) -> bool:
-    return transformation.source == source and \
-           transformation.target == target
+def new_transformation(source: Variable, target: Variable, name: str) -> Tr:
+    # noinspection PyTypeChecker
+    # cus Pycharm sucks
+    return NewTransformation(source, target, name)
 
 
-def structure_compare(a: VariablePort, b: VariablePort) -> bool:
-    if len(a.variables) == 1:
-        av = next(iter(a.variables))
-        if isinstance(av, VarTensor):
-            if len(b.variables) == 1:
-                bv = next(iter(b.variables))
-                if isinstance(bv, VarTensor):
-                    return av.type == bv.type
-                else:
-                    assert isinstance(bv, VariableGroup)
-                    # noinspection PyTypeChecker
-                    # because pycharm sucks
-                    return structure_compare(a, bv)
-            else:
-                return False
-        else:
-            assert isinstance(av, VariableGroup)
-            # noinspection PyTypeChecker
-            # because pycharm sucks
-            return structure_compare(av, b)
+def check(transformation: Transformation,
+          source: Variable,
+          target: Variable,
+          ignore_names: bool = False) -> bool:
+    return struct_check(transformation.source, source, ignore_names) and \
+           struct_check(transformation.target, target, ignore_names)
+
+
+def transform(transformation: Transformation,
+              source: Variable) -> Variable:
+    if not struct_check(transformation.source, source):
+        raise ValueError(f"Expected source of \"{fmt(transformation.source)}\","
+                         f" got \"{fmt(source)}\"")
+    return transformation.target
+
+
+def pipe(trs: List[Transformation], name: Optional[str] = None) -> Tr:
+    wrong_list = []
+    for back, front in zip(trs[:-1], trs[:-1]):
+        if not back.target == front.source:
+            wrong_list.append((back.target, front.source))
+
+    if len(wrong_list) > 0:
+        mismatch_msgs = "".join(f"\n  {v[0]} != {v[1]}" for v in wrong_list)
+        raise ValueError(f"Unable to make pipe. "
+                         f"Found {len(wrong_list)} mismatching Transformations: {mismatch_msgs}")
     else:
-        for av in a.variables:
-
-
-
-
-def structure_check_(transformation: Transformation,
-                     source: VariablePort,
-                     target: VariablePort) -> bool:
-    return structure_compare(transformation.source, source) and \
-           structure_compare(transformation.target, target)
-
+        name = "".join(t.name for t in trs) if not name else name
+        return new_transformation(
+            source=trs[0].source,
+            target=trs[-1].target,
+            name=name
+        )

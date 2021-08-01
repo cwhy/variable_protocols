@@ -26,6 +26,8 @@ see `test/examples.py`
 * specify common variables of data inputs in the field of data science and machine learning.
 * structural typing, only sum types and product types (In the general sense, not ML family ADT)
 * there should be one way to type one variable group
+* good error messages
+  * error (messages) oriented programming
 * serialization in the future (probably in Dhall)
 
 ## NonGoals
@@ -33,7 +35,3 @@ see `test/examples.py`
 * easy to optimize with current computer architectures
 * easy to comprehend (simple is not easy)
 * support nominal typing(only labels)
-
-## Todo
-* For now the set nature of VariableGroup does not allow
- shuffle-able variables of the same tensor type

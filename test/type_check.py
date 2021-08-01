@@ -1,5 +1,5 @@
 from src.variable_protocols.variables import var_group, positive_float, var_unique
-from src.variable_protocols.hashed_tree import HashedTree, check, diff
+from src.variable_protocols.hashed_tree import HashedTree, check_tr, diff
 
 ft_names = [
     "sepal length in cm",
@@ -18,9 +18,9 @@ t1 = HashedTree(iris_in)
 t2 = HashedTree(iris_in2)
 t3 = HashedTree(not_iris_in)
 
-c = check(t1, t2)
+c = check_tr(t1, t2)
 print(c)
-c = check(t1, t3)
+c = check_tr(t1, t3)
 print(c)
 d = diff(t1, t2)
 print(d)
