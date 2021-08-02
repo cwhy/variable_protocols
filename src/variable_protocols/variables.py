@@ -87,16 +87,22 @@ def gaussian(mean: float, var: float) -> Gaussian:
         raise ValueError(f"Invalid variance(var) value: {var}")
 
 
-def dim(name: str,
+def dim(label: str,
         length: Optional[int],
         positioned: bool = True,
         n_members: int = 1) -> DimensionFamily:
-    return DimensionFamily(label=name, len=length,
+    return DimensionFamily(label=label, len=length,
                            n_members=n_members, positioned=positioned)
 
 
 def var_tensor(var: BaseVariable, dims: Set[DimensionFamily]) -> VariableTensor:
     return VariableTensor(var, frozenset(dims))
+
+
+def var_array(var: BaseVariable,
+              length: int,
+              dim_label: str) -> VariableTensor:
+    return VariableTensor(var, frozenset({dim(length=length, label=dim_label)}))
 
 
 def var_scalar(var: BaseVariable) -> VariableTensor:
