@@ -5,6 +5,8 @@ from typing import Protocol, List, Optional, NamedTuple
 from variable_protocols.protocols import Variable, struct_check, fmt
 
 
+# TODO: Hole oriented design
+# Compare Variables and Variables with holes
 class Transformation(Protocol):
     @property
     @abstractmethod

@@ -6,7 +6,7 @@ from variable_protocols.base_variables import BaseVariable, \
     OneSideSupported, Gamma, Bounded, OneHot, NamedCategorical, \
     CategoryIds, Ordinal, CategoricalVector, Gaussian
 from variable_protocols.protocols import VariableTensor, Variable, \
-    VariableGroup, DimensionFamily
+    VariableGroup, DimensionFamily, TensorBase
 
 
 def bounded_float(min_val: float, max_val: float) -> Bounded:
@@ -95,11 +95,11 @@ def dim(label: str,
                            n_members=n_members, positioned=positioned)
 
 
-def var_tensor(var: BaseVariable, dims: Set[DimensionFamily]) -> VariableTensor:
+def var_tensor(var: TensorBase, dims: Set[DimensionFamily]) -> VariableTensor:
     return VariableTensor(var, frozenset(dims))
 
 
-def var_array(var: BaseVariable,
+def var_array(var: TensorBase,
               length: int,
               dim_label: str) -> VariableTensor:
     return VariableTensor(var, frozenset({dim(length=length, label=dim_label)}))
@@ -116,7 +116,7 @@ def var_group(vars_set: Set[Variable]) -> VariableGroup:
     return VariableGroup(frozenset(vars_set))
 
 
-def var_unique(var: Variable, name: str) -> VariableTensor:
+def var_unique(var: TensorBase, name: str) -> VariableTensor:
     return VariableTensor(var, frozenset(), label=name)
 
 

@@ -1,5 +1,5 @@
 from variable_protocols.variables import dim, bounded_float, var_tensor, var_scalar, one_hot, \
-    cat_from_names, var_group, positive_float, var_unique, cat_vec, cat_ids, var_ordered
+    cat_from_names, var_group, positive_float, var_unique, cat_vec, cat_ids
 from variable_protocols.common_variables import var_image, var_sentence_1hot, var_sentence
 from variable_protocols.protocols import fmt, struct_hash
 
